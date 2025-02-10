@@ -48,7 +48,6 @@ class Bot(commands.Bot):
             print(f'✓ Auto-synced commands for new guild: {guild.name}')
 
     async def on_ready(self):
-        print(f'✓ Logged in as {self.user.name} ({self.user.id})')
         await self.change_presence(
             activity=discord.Activity(
                 type=discord.ActivityType.watching,
