@@ -164,9 +164,9 @@ class MandataireQuestionnaire(commands.Cog):
 
         try:
 
-
-            # Logo de l'agence (optionnel) - à décommenter si tu veux ajouter un logo
-            c.drawImage("Efficity.png", 450, height - 50, width=100, height=50)
+            Logo = open('Efficity.png', 'r').read().strip()  
+            # Logo de l'agence (optionnel)
+            c.drawImage(Logo, 450, height - 50, width=100, height=50)
 
             # En-tête du document
             c.setFont("Times-Roman", 16)

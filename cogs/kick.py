@@ -1,51 +1,41 @@
 import discord
-from discord import app_commands
 from discord.ext import commands
+from discord import app_commands
 
-class Kick(commands.Cog):
+class Kicks(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        print("✓ Kick cog loaded")
 
     @app_commands.command(
-        name='kick',
-        description='Kicks a user from the server'
+        name="kick",
+        description="Kick a member from the server"
     )
     @app_commands.checks.has_permissions(kick_members=True)
-    @app_commands.checks.bot_has_permissions(kick_members=True)
-    async def kick_command(self, interaction: discord.Interaction, member: discord.Member, reason: str = None):
-        # Check if the user can be kicked
-        if member.top_role >= interaction.user.top_role:
-            return await interaction.response.send_message(
-                "You cannot kick someone with a higher or equal role.",
-                ephemeral=True
-            )
-
-        if member.id == interaction.user.id:
-            return await interaction.response.send_message(
-                "You cannot kick yourself.",
-                ephemeral=True
-            )
-
-        # Create kick confirmation embed
-        embed = discord.Embed(
-            title="Member Kicked",
-            description=f"**Member:** {member.mention}\n**Reason:** {reason or 'No reason provided'}",
-            color=discord.Color.red()
-        )
-        embed.set_footer(text=f"Kicked by {interaction.user}")
-
+    async def kick(self, interaction: discord.Interaction, member: discord.Member, reason: str = None):
         try:
-            await member.kick(reason=reason)
-            await interaction.response.send_message(embed=embed)
+            if member.top_role >= interaction.user.top_role:
+                await interaction.response.send_message(
+                    "You cannot kick this member due to role hierarchy!",
+                    ephemeral=True
+                )
+                return
 
-            # Log the kick if log channel exists
-            log_channel = discord.utils.get(interaction.guild.channels, name="staff-kick")
-            if log_channel:
-                await log_channel.send(embed=embed)
+            await member.kick(reason=reason)
+            
+            embed = discord.Embed(
+                title="Member Kicked",
+                description=f"{member.mention} has been kicked",
+                color=discord.Color.red()
+            )
+            embed.add_field(name="Reason", value=reason or "No reason provided")
+            embed.add_field(name="Moderator", value=interaction.user.mention)
+            
+            await interaction.response.send_message(embed=embed)
 
         except discord.Forbidden:
             await interaction.response.send_message(
-                "I don't have permission to kick this member.",
+                "I don't have permission to kick this member!",
                 ephemeral=True
             )
         except Exception as e:
@@ -54,23 +44,5 @@ class Kick(commands.Cog):
                 ephemeral=True
             )
 
-    @kick_command.error
-    async def kick_error(self, interaction: discord.Interaction, error):
-        if isinstance(error, app_commands.MissingPermissions):
-            await interaction.response.send_message(
-                "You don't have permission to kick members.",
-                ephemeral=True
-            )
-        elif isinstance(error, app_commands.BotMissingPermissions):
-            await interaction.response.send_message(
-                "I don't have permission to kick members.",
-                ephemeral=True
-            )
-        else:
-            await interaction.response.send_message(
-                f"An error occurred: {str(error)}",
-                ephemeral=True
-            )
-
 async def setup(bot):
-    await bot.add_cog(Kick(bot))
+    await bot.add_cog(Kicks(bot))
