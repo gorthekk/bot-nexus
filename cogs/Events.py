@@ -97,178 +97,282 @@ class Events(commands.Cog):
                     color=discord.Color.orange()
                 )
             
-            event_embed.timestamp = datetime.datetime.utcnow() 
             await logs_vocal.send(embed=event_embed)
 
         except Exception as e:
             print(f"Error in voice state update: {e}")
 
     @commands.Cog.listener()
-    async def on_role_remove(self, member, role):
-        logs_role = discord.utils.get(member.guild.channels, name="logs_roles")
-
-        if logs_role:
-            event_embed = discord.Embed(
-                title="��� Role Removed",
-                description=f"{member.mention} a supprimé le rôle {role.mention}",
-                color=discord.Color.red()
-            )
-            await logs_role.send(embed=event_embed)
+    async def on_member_role_update(self, before, after):
+        """Handle role changes for members"""
+        try:
+            logs_roles = discord.utils.get(after.guild.channels, name="logs_roles")
+            if not logs_roles:
+                return
+    
+            # Find added and removed roles
+            removed_roles = set(before.roles) - set(after.roles)
+            added_roles = set(after.roles) - set(before.roles)
+    
+            if removed_roles:
+                for role in removed_roles:
+                    embed = discord.Embed(
+                        title="🔴 Role Removed",
+                        description=f"Role removed from {before.mention}",
+                        color=discord.Color.red(),
+                        timestamp=datetime.utcnow()
+                    )
+                    embed.add_field(name="Role", value=role.mention)
+                    await logs_roles.send(embed=embed)
+    
+            if added_roles:
+                for role in added_roles:
+                    embed = discord.Embed(
+                        title="🟢 Role Added",
+                        description=f"Role added to {after.mention}",
+                        color=discord.Color.green(),
+                        timestamp=datetime.utcnow()
+                    )
+                    embed.add_field(name="Role", value=role.mention)
+                    await logs_roles.send(embed=embed)
+    
+        except Exception as e:
+            print(f"Error in role update: {e}")
     
     @commands.Cog.listener()
-    async def on_role_create(self, role):
-        logs_role = discord.utils.get(role.guild.channels, name="logs_roles")
-        if logs_role:
-            event_embed = discord.Embed(
-                title="��� Role Created",
-                description=f"Le rôle {role.mention} a été créé",
-                color=discord.Color.green()
-            )
-            await logs_role.send(embed=event_embed)
-    
-    @commands.Cog.listener()
-    async def on_role_update(self, before, after):
-        logs_role = discord.utils.get(after.guild.channels, name="logs_roles")
-        if logs_role:
-            event_embed = discord.Embed(
-                title="��� Role Updated",
-                description=f"Le rôle {before.mention} a été modifié en {after.mention}",
-                color=discord.Color.orange()
-            )
-            await logs_role.send(embed=event_embed)
-
-    @commands.Cog.listener()
-    async def on_guild_role_delete(self, role):
-        logs_role = discord.utils.get(role.guild.channels, name="logs_roles")
-        if logs_role:
-            event_embed = discord.Embed(
-                title="��� Role Deleted",
-                description=f"Le rôle {role.mention} a été supprimé",
-                color=discord.Color.red()
-            )
-            await logs_role.send(embed=event_embed)
-        
-
-    @commands.Cog.listener()
-    async def on_channel_create(self, channel):
-        logs_channel = discord.utils.get(channel.guild.channels, name="logs_channel")
-        if logs_channel:
-            event_embed = discord.Embed(
-                title="��� Channel Created",
-                description=f"Le channel {channel.mention} a été créé",
-                color=discord.Color.green()
-            )
-            await logs_channel.send(embed=event_embed)
-    
-    @commands.Cog.listener()
-    async def on_channel_delete(self, channel):
-        logs_channel = discord.utils.get(channel.guild.channels, name="logs_channel")
-        if logs_channel:
-            event_embed = discord.Embed(
-                title="��� Channel Deleted",
-                description=f"Le channel {channel.mention} a été supprimé",
-                color=discord.Color.red()
-            )
-            await logs_channel.send(embed=event_embed)
-    
-    @commands.Cog.listener()
-    async def on_channel_update(self, before, after):
-        logs_channel = discord.utils.get(after.guild.channels, name="logs_channel")
-        if logs_channel:
-            event_embed = discord.Embed(
-                title="��� Channel Updated",
-                description=f"Le channel {before.mention} a été modifié en {after.mention}",
-                color=discord.Color.orange()
-            )
-            await logs_channel.send(embed=event_embed)
-
-    @tasks.loop(hours=24)
-    async def daily_report(self):
-        for guild in self.bot.guilds:
-            try:
-                # Find logs channel
-                logs_channel = discord.utils.get(guild.channels, name="logs_server")
-                if not logs_channel:
-                    continue
-
-                # Create stats embed
+    async def on_guild_role_create(self, role):
+        """Handle role creation"""
+        try:
+            logs_roles = discord.utils.get(role.guild.channels, name="logs_roles")
+            if logs_roles:
                 embed = discord.Embed(
-                    title="📊 Daily Server Statistics",
-                    description=f"Stats for {guild.name}",
+                    title="🟢 Role Created",
+                    description=f"New role created",
+                    color=discord.Color.green(),
+                    timestamp=datetime.utcnow()
+                )
+                embed.add_field(name="Role", value=role.mention)
+                embed.add_field(name="Name", value=role.name)
+                embed.add_field(name="Color", value=str(role.color))
+                await logs_roles.send(embed=embed)
+    
+        except Exception as e:
+            print(f"Error in role create: {e}")
+    
+    @commands.Cog.listener()
+    async def on_guild_role_update(self, before, after):
+        """Handle role updates"""
+        try:
+            logs_roles = discord.utils.get(after.guild.channels, name="logs_roles")
+            if logs_roles:
+                embed = discord.Embed(
+                    title="🔵 Role Updated",
+                    description=f"Role modified",
                     color=discord.Color.blue(),
                     timestamp=datetime.utcnow()
                 )
-
-                # Server stats
-                embed.add_field(
-                    name="👥 Members",
-                    value=f"Total: {guild.member_count}\nOnline: {sum(1 for m in guild.members if m.status != discord.Status.offline)}",
-                    inline=True
-                )
-
-                # Channel stats
-                text_channels = len(guild.text_channels)
-                voice_channels = len(guild.voice_channels)
-                embed.add_field(
-                    name="📝 Channels",
-                    value=f"Text: {text_channels}\nVoice: {voice_channels}",
-                    inline=True
-                )
-
-                # Moderation stats
-                embed.add_field(
-                    name="🛡️ Moderation",
-                    value=f"Kicks: {self.stats['kicks']}\nBans: {self.stats['bans']}\nRole Removes: {self.stats['role_removes']}",
-                    inline=True
-                )
-
-                # Activity stats
-                embed.add_field(
-                    name="📊 Activity",
-                    value=f"Mentions: {self.stats['mentions']}\nMessages: {self.stats['messages']}",
-                    inline=True
-                )
-
-                # Reset stats after reporting
-                self.stats = {key: 0 for key in self.stats}
-
-                # Send report with owner mention
-                owner = guild.owner or await guild.fetch_member(guild.owner_id)
-                if owner:
-                    await logs_channel.send(f"{owner.mention}", embed=embed)
-
-            except Exception as e:
-                print(f"Error generating daily report: {e}")
-
-    @daily_report.before_loop
-    async def before_daily_report(self):
-        await self.bot.wait_until_ready()
-        # Wait until midnight
-        now = datetime.utcnow()
-        next_run = now.replace(hour=0, minute=0, second=0) + timedelta(days=1)
-        await discord.utils.sleep_until(next_run)
-
-    # Event listeners to track stats
+                embed.add_field(name="Role", value=after.mention)
+                
+                if before.name != after.name:
+                    embed.add_field(name="Name Changed", value=f"From: {before.name}\nTo: {after.name}")
+                if before.color != after.color:
+                    embed.add_field(name="Color Changed", value=f"From: {before.color}\nTo: {after.color}")
+                if before.permissions != after.permissions:
+                    embed.add_field(name="Permissions Changed", value="Role permissions were modified")
+                    
+                await logs_roles.send(embed=embed)
+    
+        except Exception as e:
+            print(f"Error in role update: {e}")
+    
     @commands.Cog.listener()
-    async def on_message(self, message):
-        if message.mentions:
-            self.stats['mentions'] += len(message.mentions)
-        self.stats['messages'] += 1
+    async def on_guild_role_delete(self, role):
+        """Handle role deletion"""
+        try:
+            logs_roles = discord.utils.get(role.guild.channels, name="logs_roles")
+            if logs_roles:
+                embed = discord.Embed(
+                    title="🔴 Role Deleted",
+                    description=f"Role has been deleted",
+                    color=discord.Color.red(),
+                    timestamp=datetime.utcnow()
+                )
+                embed.add_field(name="Name", value=role.name)
+                embed.add_field(name="Color", value=str(role.color))
+                await logs_roles.send(embed=embed)
+    
+        except Exception as e:
+            print(f"Error in role delete: {e}")
+    
+    @commands.Cog.listener()
+    async def on_guild_member_role_add(self, member, role):
+        """Handle role addition for members"""
+        try:
+            logs_roles = discord.utils.get(member.guild.channels, name="logs_roles")
+            if logs_roles:
+                embed = discord.Embed(
+                    title="🟢 Role Added",
+                    description=f"Role added to {member.mention}",
+                    color=discord.Color.green(),
+                    timestamp=datetime.utcnow()
+                )
+                embed.add_field(name="Role", value=role.mention)
+                await logs_roles.send(embed=embed)
+    
+        except Exception as e:
+            print(f"Error in role add: {e}")
+    
+    @commands.Cog.listener()
+    async def on_guild_member_role_remove(self, member, role):
+        """Handle role removal for members"""
+        try:
+            logs_roles = discord.utils.get(member.guild.channels, name="logs_roles")
+            if logs_roles:
+                embed = discord.Embed(
+                    title="�� Role Removed",
+                    description=f"Role removed from {member.mention}",
+                    color=discord.Color.red(),
+                    timestamp=datetime.utcnow()
+                )
+                embed.add_field(name="Role", value=role.mention)
+                await logs_roles.send(embed=embed)
+            
+        except Exception as e:
+            print(f"Error in role remove: {e}")
+        
+    
+        
 
     @commands.Cog.listener()
-    async def on_member_ban(self, guild, user):
-        self.stats['bans'] += 1
-
+    async def on_guild_channel_delete(self, channel):
+        """Handle channel deletion"""
+        try:
+            logs_channel = discord.utils.get(channel.guild.channels, name="logs_channel")
+            if logs_channel:
+                embed = discord.Embed(
+                    title="🔴 Channel Deleted",
+                    description="A channel has been deleted",
+                    color=discord.Color.red(),
+                    timestamp=datetime.utcnow()
+                )
+                embed.add_field(name="Name", value=channel.name, inline=True)
+                embed.add_field(name="Type", value=str(channel.type), inline=True)
+                embed.add_field(name="Category", value=channel.category.name if channel.category else "None", inline=True)
+                await logs_channel.send(embed=embed)
+        except Exception as e:
+            print(f"Error in channel delete: {e}")
+    
     @commands.Cog.listener()
-    async def on_member_kick(self, guild, user):
-        self.stats['kicks'] += 1
-
+    async def on_guild_channel_create(self, channel):
+        """Handle channel creation"""
+        try:
+            logs_channel = discord.utils.get(channel.guild.channels, name="logs_channel")
+            if logs_channel:
+                embed = discord.Embed(
+                    title="🟢 Channel Created",
+                    description="A new channel has been created",
+                    color=discord.Color.green(),
+                    timestamp=datetime.utcnow()
+                )
+                embed.add_field(name="Name", value=channel.mention, inline=True)
+                embed.add_field(name="Type", value=str(channel.type), inline=True)
+                embed.add_field(name="Category", value=channel.category.name if channel.category else "None", inline=True)
+                await logs_channel.send(embed=embed)
+        except Exception as e:
+            print(f"Error in channel create: {e}")
+    
     @commands.Cog.listener()
-    async def on_member_update(self, before, after):
-        if len(before.roles) > len(after.roles):
-            self.stats['role_removes'] += 1
+    async def on_guild_channel_update(self, before, after):
+        """Handle channel updates"""
+        try:
+            logs_channel = discord.utils.get(after.guild.channels, name="logs_channel")
+            if logs_channel:
+                embed = discord.Embed(
+                    title="🔵 Channel Updated",
+                    description=f"Changes in {after.mention}",
+                    color=discord.Color.blue(),
+                    timestamp=datetime.utcnow()
+                )
+                
+                # Check what changed
+                if before.name != after.name:
+                    embed.add_field(name="Name Changed", value=f"From: {before.name}\nTo: {after.name}")
+                if before.category != after.category:
+                    embed.add_field(
+                        name="Category Changed",
+                        value=f"From: {before.category.name if before.category else 'None'}\nTo: {after.category.name if after.category else 'None'}"
+                    )
+                if before.position != after.position:
+                    embed.add_field(name="Position Changed", value=f"From: {before.position}\nTo: {after.position}")
+                if before.permissions_synced != after.permissions_synced:
+                    embed.add_field(name="Permissions Sync Changed", value=f"Now {'synced' if after.permissions_synced else 'not synced'}")
+                
+                if len(embed.fields) > 0:  # Only send if something changed
+                    await logs_channel.send(embed=embed)
+                    
+        except Exception as e:
+            print(f"Error in channel update: {e}")
+    
+    
 
 
+    # @tasks.loop(hours=24)
+    # async def daily_report(self):
+    #     for guild in self.bot.guilds:
+    #         try:
+    #             # Find logs channel
+    #             logs_channel = discord.utils.get(guild.channels, name="logs_server")
+    #             if not logs_channel:
+    #                 continue
+
+    #             # Create stats embed
+    #             embed = discord.Embed(
+    #                 title="📊 Daily Server Statistics",
+    #                 description=f"Stats for {guild.name}",
+    #                 color=discord.Color.blue(),
+    #                 timestamp=datetime.utcnow()
+    #             )
+
+    #             # Server stats
+    #             embed.add_field(
+    #                 name="👥 Members",
+    #                 value=f"Total: {guild.member_count}\nOnline: {sum(1 for m in guild.members if m.status != discord.Status.offline)}",
+    #                 inline=True
+    #             )
+
+    #             # Channel stats
+    #             text_channels = len(guild.text_channels)
+    #             voice_channels = len(guild.voice_channels)
+    #             embed.add_field(
+    #                 name="📝 Channels",
+    #                 value=f"Text: {text_channels}\nVoice: {voice_channels}",
+    #                 inline=True
+    #             )
+
+    #             # Moderation stats
+    #             embed.add_field(
+    #                 name="🛡️ Moderation",
+    #                 value=f"Kicks: {self.stats['kicks']}\nBans: {self.stats['bans']}\nRole Removes: {self.stats['role_removes']}",
+    #                 inline=True
+    #             )
+
+    #             # Activity stats
+    #             embed.add_field(
+    #                 name="📊 Activity",
+    #                 value=f"Mentions: {self.stats['mentions']}\nMessages: {self.stats['messages']}",
+    #                 inline=True
+    #             )
+
+    #             # Reset stats after reporting
+    #             self.stats = {key: 0 for key in self.stats}
+
+    #             # Send report with owner mention
+    #             owner = guild.owner or await guild.fetch_member(guild.owner_id)
+    #             if owner:
+    #                 await logs_channel.send(f"{owner.mention}", embed=embed)
+
+    #         except Exception as e:
+    #             print(f"Error generating daily report: {e}")
 
 async def setup(bot):
     await bot.add_cog(Events(bot))
